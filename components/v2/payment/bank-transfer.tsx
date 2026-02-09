@@ -18,8 +18,8 @@ interface BankTransferProps {
         accountnumber?: string; // For NGN payments
         accountname?: string; // For NGN payments
         amount?: number; // For NGN payments
-        instruction: string;
-        txid: string; // Transaction ID for USD payments
+        instruction?: string;
+        txid?: string; // Transaction ID for USD payments
       };
     };
   };
@@ -64,7 +64,7 @@ export function BankTransfer({
     accountNumber: "839128227",
     accountName: "ConnectWorld Inc",
     amount: paymentData.amount,
-    transactionId: paymentData.paymentInitialization.toronetResponse.txid
+    transactionId: paymentData.paymentInitialization.toronetResponse.txid || ""
   };
 
   // NGN bank payment details (from API response)
