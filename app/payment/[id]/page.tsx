@@ -73,6 +73,54 @@ export default function PaymentPage() {
   const params = useParams();
   const paymentId = params?.id as string;
 
+  // Handle success redirect with POST request
+  const handleSuccessRedirect = async (paymentData: PaymentData, transactionData: { transactionId: string; senderName: string; senderPhone: string }) => {
+    try {
+      console.log('Posting to success endpoint:', paymentData.successUrl);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+      
+      const response = await fetch(paymentData.successUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentLinkId: paymentId,
+          transactionId: transactionData.transactionId,
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          senderName: transactionData.senderName,
+          senderPhone: transactionData.senderPhone,
+          paymentMethod: paymentData.paymentType,
+          status: 'completed',
+          paidAt: new Date().toISOString(),
+          name: paymentData.name
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        console.log('Success endpoint notified successfully');
+      } else {
+        console.error('Failed to notify success endpoint:', response.status);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Success endpoint request timed out after 8 seconds');
+      } else {
+        console.error('Error calling success endpoint:', error);
+      }
+    } finally {
+      // Always redirect regardless of POST success/failure since payment was successful
+      console.log('Redirecting to success page:', paymentData.successUrl);
+      window.location.href = paymentData.successUrl;
+    }
+  };
+
   // Initialize session, performance monitoring, and service worker
   useEffect(() => {
     if (paymentId) {
@@ -264,7 +312,7 @@ export default function PaymentPage() {
       console.log('Verification status:', {
         isVerifying,
         verificationData,
-        verificationError,
+        verificationError  ,
         isSuccess,
         paymentData: paymentData ? {
           currency: paymentData.currency,
@@ -535,10 +583,14 @@ export default function PaymentPage() {
             transactionId: paymentData.transactionId
           });
           
-          // Redirect to success URL
+          // POST to success endpoint then redirect
           if (paymentData.successUrl) {
-            setTimeout(() => {
-              window.location.href = paymentData.successUrl;
+            setTimeout(async () => {
+              await handleSuccessRedirect(paymentData, { 
+                transactionId: paymentData.transactionId,
+                senderName,
+                senderPhone 
+              });
             }, 2000);
           }
           return;
@@ -562,10 +614,14 @@ export default function PaymentPage() {
           currency: paymentData.currency
         });
         
-        // Redirect to success URL after showing success page
+        // POST to success endpoint then redirect
         if (paymentData.successUrl) {
-          setTimeout(() => {
-            window.location.href = paymentData.successUrl;
+          setTimeout(async () => {
+            await handleSuccessRedirect(paymentData, { 
+              transactionId: paymentData.transactionId,
+              senderName,
+              senderPhone 
+            });
           }, 3000); // Wait 3 seconds to show success page
         }
       }
